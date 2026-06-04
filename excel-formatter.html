@@ -1,0 +1,1228 @@
+<!--
+  Excel 格式统一工具
+  Author: joey-ccb
+  Repository: https://github.com/joey-ccb/excel-formatter
+  License: MIT
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel 格式统一工具</title>
+    <meta name="author" content="joey-ccb">
+    <meta name="repository" content="https://github.com/joey-ccb/excel-formatter">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Microsoft YaHei", "SimSun", sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .upload-area {
+            border: 2px dashed #ccc;
+            padding: 30px;
+            text-align: center;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #4CAF50;
+        }
+
+        .upload-area input[type="file"] {
+            display: none;
+        }
+
+        .sheet-selector {
+            margin-top: 20px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .sheet-selector label {
+            font-size: 11pt;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .sheet-selector select {
+            padding: 8px 14px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 10pt;
+            min-width: 200px;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .sheet-selector select:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 2px rgba(76,175,80,0.15);
+        }
+
+        .sheet-count {
+            font-size: 9pt;
+            color: #666;
+        }
+
+        .column-selector {
+            margin-top: 15px;
+            display: none;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+        }
+
+        .column-selector-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .column-selector-header h3 {
+            font-size: 10pt;
+            color: #333;
+        }
+
+        .column-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .column-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .column-item input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        .column-item label {
+            font-size: 9pt;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .column-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 9pt;
+        }
+
+        .wide-warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+            font-size: 9pt;
+        }
+
+        .config-panel {
+            margin-top: 20px;
+            background: #f0f7ff;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #b3d9ff;
+        }
+
+        .config-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .config-panel-header h3 {
+            font-size: 12pt;
+            color: #0066cc;
+            margin: 0;
+        }
+
+        .current-preset {
+            font-size: 10pt;
+            color: #2e7d32;
+            font-weight: 600;
+            padding: 6px 14px;
+            background: #e8f5e9;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
+        .preset-selector {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .preset-selector label {
+            font-size: 10pt;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .preset-selector select {
+            padding: 8px 14px;
+            border: 1px solid #b3d9ff;
+            border-radius: 6px;
+            font-size: 10pt;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .preset-selector select:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 2px rgba(76,175,80,0.15);
+        }
+
+        .config-upload {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #b3d9ff;
+        }
+
+        .config-upload input[type="file"] {
+            font-size: 9pt;
+        }
+
+        .btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            background: #45a049;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #2196F3;
+        }
+
+        .btn-secondary:hover {
+            background: #0b7dda;
+        }
+
+        .steps-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .step-item {
+            background: white;
+            padding: 12px 14px;
+            border-radius: 6px;
+            border-left: 3px solid #4CAF50;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .step-item h3 {
+            font-size: 10pt;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #333;
+        }
+
+        .step-item p {
+            font-size: 9pt;
+            color: #555;
+            line-height: 1.5;
+        }
+
+        .preview-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+
+        .page-settings {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .setting-item label {
+            font-size: 10pt;
+            font-weight: bold;
+        }
+
+        .setting-item select,
+        .setting-item input {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .orientation-badge {
+            background: #4CAF50;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 9pt;
+        }
+
+        .orientation-badge.landscape {
+            background: #FF9800;
+        }
+
+        /* 表格样式 - 模拟Excel */
+        .excel-table {
+            border-collapse: collapse;
+            width: 100%;
+            font-family: "Microsoft YaHei", "SimSun", sans-serif;
+        }
+
+        .excel-table th {
+            font-size: 12pt;
+            font-weight: bold;
+            background: #f0f0f0;
+            border: 1px solid #999;
+            padding: 6px 8px;
+            text-align: left;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        .excel-table td {
+            font-size: 10pt;
+            border: 1px solid #999;
+            padding: 5px 8px;
+            vertical-align: middle;
+            word-wrap: break-word;
+            white-space: normal;
+        }
+
+        .excel-table td.text-cell {
+            text-align: left;
+        }
+
+        .excel-table td.number-cell {
+            text-align: right;
+        }
+
+        .excel-table tr:nth-child(even) {
+            background: #fafafa;
+        }
+
+        .excel-table tr:hover {
+            background: #e8f4f8;
+        }
+
+        .note-row td {
+            font-size: 9pt;
+            font-style: italic;
+            color: #666;
+        }
+
+        .frozen-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .stats {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            font-size: 9pt;
+        }
+
+        .stats span {
+            margin-right: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Loading 遮罩 */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loading-overlay .loading-content {
+            background: white;
+            padding: 30px 40px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 16px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        /* 成功提示 */
+        .success-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* 打印样式 */
+        @media print {
+            body {
+                padding: 0;
+                background: white;
+            }
+
+            .controls,
+            .btn,
+            .stats {
+                display: none !important;
+            }
+
+            .preview-container {
+                box-shadow: none;
+                padding: 0;
+                overflow: visible !important;
+            }
+
+            .page-settings {
+                display: none !important;
+            }
+
+            @page {
+                size: A4;
+                margin: 1.5cm 1.8cm;
+            }
+
+            .excel-table {
+                width: 100% !important;
+                page-break-inside: auto;
+                border-collapse: collapse !important;
+            }
+
+            .excel-table thead {
+                display: table-header-group;
+            }
+
+            .excel-table tbody {
+                display: table-row-group;
+            }
+
+            .excel-table tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+
+            .excel-table tr:last-child {
+                page-break-after: avoid;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Excel 格式统一工具</h1>
+
+        <div class="controls">
+            <div class="upload-area" id="uploadArea">
+                <p>点击或拖拽上传 Excel 文件 (.xlsx, .xls)</p>
+                <input type="file" id="fileInput" accept=".xlsx,.xls">
+            </div>
+
+            <div class="sheet-selector" id="sheetSelector">
+                <label for="sheetSelect">选择 Sheet 页:</label>
+                <select id="sheetSelect"></select>
+                <span class="sheet-count" id="sheetCount"></span>
+            </div>
+
+            <div class="config-panel" id="configPanel">
+                <div class="config-panel-header">
+                    <div class="preset-selector">
+                        <label>格式选择:</label>
+                        <select id="presetSelect">
+                            <option value="standard">标准报表</option>
+                            <option value="wide_table">宽表报表</option>
+                            <option value="compact">紧凑型</option>
+                            <option value="formal">正式文档</option>
+                            <option value="custom">自定义</option>
+                        </select>
+                    </div>
+                    <div class="current-preset" id="currentPreset">当前格式：标准报表</div>
+                </div>
+                <div class="steps-info" id="stepsInfo"></div>
+            </div>
+
+            <div class="wide-warning" id="wideWarning">
+                ⚠️ 列数较多（<span id="colCount">0</span>列），建议横向打印或隐藏部分列
+            </div>
+
+            <div class="column-selector" id="columnSelector">
+                <div class="column-selector-header">
+                    <h3>列显示设置（共 <span id="totalCols">0</span> 列）</h3>
+                    <div>
+                        <button class="btn btn-small" id="selectAllCols">全选</button>
+                        <button class="btn btn-small" id="deselectAllCols">全不选</button>
+                    </div>
+                </div>
+                <div class="column-list" id="columnList"></div>
+                <div class="column-actions">
+                    <button class="btn btn-small" id="applyColumns">应用选择</button>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">                
+                <button class="btn" id="printBtn" disabled>打印预览</button>
+                <button class="btn btn-secondary" id="formatBtn" disabled>格式化</button>
+                <button class="btn hidden" id="exportBtn">导出 Excel</button>
+            </div>
+        </div>
+
+        <div class="preview-container hidden" id="previewContainer">
+            <h2 style="margin-bottom: 15px;">预览</h2>
+            <div id="tableContainer"></div>
+            <div class="stats" id="stats"></div>
+        </div>
+    </div>
+
+    <script>
+        let workbook = null;
+        let worksheet = null;
+        let originalData = null;
+        let formattedData = null;
+
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const sheetSelector = document.getElementById('sheetSelector');
+        const sheetSelect = document.getElementById('sheetSelect');
+        const sheetCount = document.getElementById('sheetCount');
+        const configPanel = document.getElementById('configPanel');
+        const presetSelect = document.getElementById('presetSelect');
+        const configUpload = document.getElementById('configUpload');
+        const wideWarning = document.getElementById('wideWarning');
+        const colCount = document.getElementById('colCount');
+        const columnSelector = document.getElementById('columnSelector');
+        const columnList = document.getElementById('columnList');
+        const totalCols = document.getElementById('totalCols');
+        const selectAllCols = document.getElementById('selectAllCols');
+        const deselectAllCols = document.getElementById('deselectAllCols');
+        const applyColumns = document.getElementById('applyColumns');
+        const formatBtn = document.getElementById('formatBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const printBtn = document.getElementById('printBtn');
+        const previewContainer = document.getElementById('previewContainer');
+        const tableContainer = document.getElementById('tableContainer');
+        const stats = document.getElementById('stats');
+        const stepsInfo = document.getElementById('stepsInfo');
+        const currentPresetEl = document.getElementById('currentPreset');
+
+        // 预设名称映射
+        const presetNameMap = {
+            'standard': '标准报表',
+            'wide_table': '宽表报表',
+            'compact': '紧凑型',
+            'formal': '正式文档'
+        };
+
+        // 列可见性控制
+        let visibleColumns = [];
+        let allColumns = [];
+
+        // Loading 和 Toast 辅助函数
+        function showLoading(text = '正在处理...') {
+            const overlay = document.createElement('div');
+            overlay.className = 'loading-overlay';
+            overlay.id = 'loadingOverlay';
+            overlay.innerHTML = `
+                <div class="loading-content">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">${text}</div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.remove();
+        }
+
+        function showSuccessToast(text = '操作成功！') {
+            const toast = document.createElement('div');
+            toast.className = 'success-toast';
+            toast.textContent = text;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2500);
+        }
+
+        // 当前配置
+        let currentPresetName = 'standard';
+        let currentConfig = {
+            paper: { size: 'A4', orientation: 'auto', landscape_threshold: 19 },
+            margins: { top: 1.5, bottom: 1.5, left: 1.8, right: 1.8 },
+            font: {
+                header: { size: 12, bold: true },
+                data: { size: 10, bold: false },
+                note: { size: 9, italic: true }
+            },
+            layout: {
+                unmerge: { enable: true, fill_mode: 'previous_row' },
+                column_width: { mode: 'auto', min_width: 8, max_width: 50 },
+                border: { style: 'thin' },
+                alignment: { horizontal: 'auto', vertical: 'middle' },
+                wrap_text: true
+            },
+            freeze: { enable: true, pane: 'A2' },
+            print: { enable: true, fit_to_width: 1, fit_to_height: 0 }
+        };
+
+        // 预设配置
+        const presets = {
+            standard: {
+                paper: { orientation: 'auto' },
+                margins: { top: 1.5, bottom: 1.5, left: 1.8, right: 1.8 },
+                font: { header: { size: 12, bold: true }, data: { size: 10 } }
+            },
+            wide_table: {
+                paper: { orientation: 'landscape' },
+                margins: { top: 1.0, bottom: 1.0, left: 1.0, right: 1.0 },
+                font: { header: { size: 10, bold: true }, data: { size: 9 } }
+            },
+            compact: {
+                paper: { orientation: 'auto' },
+                margins: { top: 1.0, bottom: 1.0, left: 1.2, right: 1.2 },
+                font: { header: { size: 11, bold: true }, data: { size: 9 } }
+            },
+            formal: {
+                paper: { orientation: 'portrait' },
+                margins: { top: 2.0, bottom: 2.0, left: 2.5, right: 2.5 },
+                font: { header: { size: 14, bold: true }, data: { size: 12 } }
+            }
+        };
+
+        // 上传区域点击
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // 拖拽上传
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#4CAF50';
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.borderColor = '#ccc';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#ccc';
+            const file = e.dataTransfer.files[0];
+            if (file) handleFile(file);
+        });
+
+        // 文件选择
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) handleFile(file);
+        });
+
+        // 处理文件
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                workbook = XLSX.read(data, { type: 'array' });
+
+                // 填充 Sheet 选择器
+                populateSheetSelector();
+
+                // 默认选择第一个 Sheet
+                if (workbook.SheetNames.length > 0) {
+                    loadSheet(workbook.SheetNames[0]);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 填充 Sheet 选择器
+        function populateSheetSelector() {
+            sheetSelect.innerHTML = '';
+
+            workbook.SheetNames.forEach((name, index) => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                sheetSelect.appendChild(option);
+            });
+
+            sheetCount.textContent = `共 ${workbook.SheetNames.length} 个 Sheet 页`;
+            sheetSelector.style.display = 'flex';
+        }
+
+        // 加载指定 Sheet
+        function loadSheet(sheetName) {
+            worksheet = workbook.Sheets[sheetName];
+            originalData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+            formattedData = null;
+
+            // 隐藏导出按钮（需要重新格式化）
+            exportBtn.classList.add('hidden');
+
+            if (originalData.length > 0) {
+                const colCount = originalData[0]?.length || 0;
+
+                // 列数超过 8 列时显示警告和列选择器
+                if (colCount > 8) {
+                    wideWarning.style.display = 'block';
+                    document.getElementById('colCount').textContent = colCount;
+                    columnSelector.style.display = 'block';
+                    totalCols.textContent = colCount;
+                    initColumnSelector(originalData[0]);
+                } else {
+                    wideWarning.style.display = 'none';
+                    columnSelector.style.display = 'none';
+                    visibleColumns = []; // 重置，显示所有列
+                }
+
+                formatBtn.disabled = false;
+                displayTable(originalData, false);
+            } else {
+                formatBtn.disabled = true;
+                printBtn.disabled = true;
+                previewContainer.classList.add('hidden');
+            }
+        }
+
+        // 渲染格式配置信息
+        function renderConfigInfo() {
+            const cfg = currentConfig;
+            const orient = cfg.paper.orientation;
+            const orientText = orient === 'landscape' ? '横向' : orient === 'portrait' ? '纵向' : '智能纵向/横向';
+            const landscapeNote = orient === 'auto' ? '（>19cm 自动横向）' : '';
+            const headerFont = `${cfg.font.header.size}pt${cfg.font.header.bold ? ' 加粗' : ''}`;
+            const dataFont = `${cfg.font.data.size}pt${cfg.font.data.bold ? ' 加粗' : ''}`;
+            const noteFont = `${cfg.font.note.size}pt${cfg.font.note.italic ? ' 斜体' : ''}`;
+
+            stepsInfo.innerHTML = `
+                <div class="step-item">
+                    <h3>纸张设置</h3>
+                    <p>${cfg.paper.size} ${orientText}${landscapeNote}</p>
+                </div>
+                <div class="step-item">
+                    <h3>页面边距</h3>
+                    <p>上 ${cfg.margins.top}cm，下 ${cfg.margins.bottom}cm，左 ${cfg.margins.left}cm，右 ${cfg.margins.right}cm</p>
+                </div>
+                <div class="step-item">
+                    <h3>统一字体</h3>
+                    <p>表头 ${headerFont}，数据 ${dataFont}，注释 ${noteFont}</p>
+                </div>
+                <div class="step-item">
+                    <h3>排版布局</h3>
+                    <p>${cfg.layout.unmerge.enable ? '解合并' : '不解合并'}、${cfg.layout.column_width?.mode || 'auto'}列宽、${cfg.layout.border.style}边框、${cfg.layout.alignment.horizontal}对齐、垂直居中、${cfg.layout.wrap_text ? '自动换行' : '不换行'}</p>
+                </div>
+                <div class="step-item">
+                    <h3>冻结首行</h3>
+                    <p>${cfg.freeze.enable ? `freeze_panes = "${cfg.freeze.pane}"` : '未启用'}</p>
+                </div>
+                <div class="step-item">
+                    <h3>打印缩放</h3>
+                    <p>${cfg.print.enable ? `fitToWidth=${cfg.print.fit_to_width}，自动缩放至${cfg.print.fit_to_width}页宽` : '未启用'}</p>
+                </div>
+            `;
+        }
+
+        // 应用预设配置
+        function applyPreset(presetName) {
+            if (presetName === 'custom') {
+                alert('请选择预设模板或上传自定义配置文件');
+                return;
+            }
+
+            const preset = presets[presetName];
+            if (!preset) return;
+
+            // 合并配置
+            currentConfig = {
+                ...currentConfig,
+                ...preset,
+                paper: { ...currentConfig.paper, ...preset.paper },
+                margins: { ...currentConfig.margins, ...preset.margins },
+                font: {
+                    ...currentConfig.font,
+                    header: { ...currentConfig.font.header, ...preset.font?.header },
+                    data: { ...currentConfig.font.data, ...preset.font?.data }
+                }
+            };
+
+            currentPresetName = presetName;
+            updateCurrentPresetDisplay();
+            renderConfigInfo();
+        }
+
+        // 更新当前格式显示
+        function updateCurrentPresetDisplay() {
+            if (currentPresetEl) {
+                const name = presetNameMap[currentPresetName] || currentPresetName || '自定义配置';
+                currentPresetEl.textContent = `当前格式：${name}`;
+            }
+        }
+
+        // 自定义配置文件列表（可在此添加 config 目录下的文件名）
+        const customConfigFiles = [];
+
+        // 初始化时加载自定义配置到下拉列表
+        function loadCustomConfigsToSelect() {
+            customConfigFiles.forEach(file => {
+                const name = file.replace(/\.ya?ml$/i, '');
+                const option = document.createElement('option');
+                option.value = 'config:' + file;
+                option.textContent = name;
+                presetSelect.appendChild(option);
+            });
+        }
+
+        // 解析 YAML 配置
+        function parseYamlConfig(yaml, name) {
+            try {
+                const config = jsyaml.load(yaml);
+                if (config) {
+                    currentConfig = { ...currentConfig, ...config };
+                    currentPresetName = name || 'custom';
+                    updateCurrentPresetDisplay();
+                    renderConfigInfo();
+                }
+            } catch (err) {
+                alert('配置文件解析失败：' + err.message);
+            }
+        }
+
+        // 格式选择变化事件 - 自动应用
+        presetSelect.addEventListener('change', () => {
+            const value = presetSelect.value;
+
+            if (!value) {
+                alert('请选择配置');
+                return;
+            }
+
+            // 自定义 - 选择文件
+            if (value === 'custom') {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.yaml,.yml';
+                input.onchange = (e) => {
+                    const selectedFile = e.target.files[0];
+                    if (!selectedFile) return;
+                    const name = selectedFile.name.replace(/\.ya?ml$/i, '');
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        parseYamlConfig(event.target.result, name);
+                    };
+                    reader.readAsText(selectedFile);
+                };
+                input.click();
+                return;
+            }
+
+            // 自定义配置文件（从 config 目录）
+            if (value.startsWith('config:')) {
+                const file = value.replace('config:', '');
+                const name = file.replace(/\.ya?ml$/i, '');
+
+                // 尝试 fetch 加载（适用于 HTTP 服务器）
+                fetch('config/' + file)
+                    .then(response => {
+                        if (!response.ok) throw new Error('文件不存在');
+                        return response.text();
+                    })
+                    .then(yaml => {
+                        parseYamlConfig(yaml, name);
+                    })
+                    .catch(err => {
+                        // fetch 失败时，使用文件选择器（适用于 file:// 协议）
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.yaml,.yml';
+                        input.onchange = (e) => {
+                            const selectedFile = e.target.files[0];
+                            if (!selectedFile) return;
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                                parseYamlConfig(event.target.result, name);
+                            };
+                            reader.readAsText(selectedFile);
+                        };
+                        input.click();
+                    });
+                return;
+            }
+
+            // 内置预设
+            applyPreset(value);
+        });
+
+        // 初始化
+        loadCustomConfigsToSelect();
+
+        // 初始化列选择器
+        function initColumnSelector(headers) {
+            // 过滤掉表头为空的列
+            allColumns = headers
+                .map((h, i) => ({ index: i, name: h || `列${i + 1}` }))
+                .filter(col => headers[col.index] !== undefined && headers[col.index] !== null && headers[col.index] !== '');
+
+            visibleColumns = allColumns.map(c => c.index);
+
+            columnList.innerHTML = '';
+            allColumns.forEach(col => {
+                const item = document.createElement('div');
+                item.className = 'column-item';
+                item.innerHTML = `
+                    <input type="checkbox" id="col_${col.index}" value="${col.index}" checked>
+                    <label for="col_${col.index}">${col.name}</label>
+                `;
+                columnList.appendChild(item);
+            });
+
+            // 更新列数显示
+            totalCols.textContent = allColumns.length;
+        }
+
+        // 全选列
+        selectAllCols.addEventListener('click', () => {
+            columnList.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+        });
+
+        // 全不选列
+        deselectAllCols.addEventListener('click', () => {
+            columnList.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+        });
+
+        // 应用列选择
+        applyColumns.addEventListener('click', () => {
+            const checked = columnList.querySelectorAll('input[type="checkbox"]:checked');
+            visibleColumns = Array.from(checked).map(cb => parseInt(cb.value));
+
+            if (visibleColumns.length === 0) {
+                alert('请至少选择一列！');
+                return;
+            }
+
+            // 重新显示表格
+            if (formattedData) {
+                displayTable(formattedData, true);
+            } else {
+                displayTable(originalData, false);
+            }
+        });
+
+        // Sheet 选择变化事件
+        sheetSelect.addEventListener('change', (e) => {
+            loadSheet(e.target.value);
+        });
+
+        // 显示表格
+        function displayTable(data, isFormatted) {
+            if (!data || data.length === 0) {
+                previewContainer.classList.add('hidden');
+                return;
+            }
+
+            previewContainer.classList.remove('hidden');
+
+            const headerRow = data[0];
+            const colCount = headerRow ? headerRow.length : 0;
+
+            // 确定要显示的列索引
+            let colsToShow = [];
+            if (visibleColumns.length > 0) {
+                // 使用用户选择的列，但过滤掉表头为空的
+                colsToShow = visibleColumns.filter(i => {
+                    if (i >= colCount) return false;
+                    const headerValue = headerRow[i];
+                    return headerValue !== undefined && headerValue !== null && headerValue !== '';
+                });
+            } else {
+                // 过滤掉表头为空的列
+                for (let i = 0; i < colCount; i++) {
+                    const headerValue = headerRow[i];
+                    if (headerValue !== undefined && headerValue !== null && headerValue !== '') {
+                        colsToShow.push(i);
+                    }
+                }
+            }
+
+            let html = '<table class="excel-table">';
+
+            // 表头
+            html += '<thead><tr class="frozen-header">';
+            colsToShow.forEach(i => {
+                html += `<th>${headerRow[i] !== undefined && headerRow[i] !== null ? headerRow[i] : ''}</th>`;
+            });
+            html += '</tr></thead>';
+
+            // 数据行
+            html += '<tbody>';
+            for (let i = 1; i < data.length; i++) {
+                const row = data[i];
+                const isNote = isNoteRow(row);
+                html += `<tr${isNote ? ' class="note-row"' : ''}>`;
+
+                colsToShow.forEach(j => {
+                    const cell = row[j];
+                    const cellType = isNumber(cell) ? 'number-cell' : 'text-cell';
+                    const value = cell !== null && cell !== undefined ? cell : '';
+                    html += `<td class="${cellType}">${value}</td>`;
+                });
+
+                html += '</tr>';
+            }
+            html += '</tbody></table>';
+
+            tableContainer.innerHTML = html;
+
+            // 统计信息
+            stats.innerHTML = `
+                <span>行数：${data.length}</span>
+                <span>显示列：${visibleColumns.length > 0 ? visibleColumns.length : (data[0]?.length || 0)}</span>
+                <span>总列数：${data[0]?.length || 0}</span>
+                <span>合并单元格：${isFormatted ? '已解除' : '原始'}</span>
+                <span>冻结首行：${isFormatted ? '是' : '否'}</span>
+            `;
+
+            printBtn.disabled = false;
+        }
+
+        // 判断是否为注释行
+        function isNoteRow(row) {
+            if (!row || row.length === 0) return false;
+            const text = row.join(' ').toLowerCase();
+            return text.includes('注') || text.includes('备注') || text.includes('comment') || text.includes('note');
+        }
+
+        // 判断是否为数字
+        function isNumber(value) {
+            if (value === null || value === undefined || value === '') return false;
+            return !isNaN(parseFloat(value)) && isFinite(value);
+        }
+
+        // 应用格式统一
+        formatBtn.addEventListener('click', () => {
+            if (!originalData || originalData.length === 0) {
+                alert('请先上传 Excel 文件！');
+                return;
+            }
+
+            showLoading('正在格式化数据...');
+            formatBtn.disabled = true;
+
+            // 使用 setTimeout 让 loading 有机会渲染
+            setTimeout(() => {
+                try {
+                    // Step 4: 解合并单元格（按上一行对应列的值填充）
+                    formattedData = JSON.parse(JSON.stringify(originalData));
+
+                    // 统一列数
+                    const maxCols = Math.max(...formattedData.map(row => row.length));
+                    formattedData = formattedData.map(row => {
+                        while (row.length < maxCols) row.push('');
+                        return row;
+                    });
+
+                    // 按上一行对应列的值填充空单元格（解合并）
+                    for (let i = 1; i < formattedData.length; i++) {
+                        for (let j = 0; j < maxCols; j++) {
+                            if (formattedData[i][j] === '' || formattedData[i][j] === null || formattedData[i][j] === undefined) {
+                                // 使用上一行对应列的值填充
+                                formattedData[i][j] = formattedData[i - 1][j] || '';
+                            }
+                        }
+                    }
+
+                    // 重置列选择（格式化后显示所有列）
+                    visibleColumns = [];
+
+                    displayTable(formattedData, true);
+                    showSuccessToast('格式化完成！');
+
+                    // 显示导出按钮
+                    exportBtn.classList.remove('hidden');
+                } catch (e) {
+                    alert('格式化失败：' + e.message);
+                } finally {
+                    hideLoading();
+                    formatBtn.disabled = false;
+                }
+            }, 100);
+        });
+
+        // 导出 Excel
+        exportBtn.addEventListener('click', () => {
+            if (!formattedData || formattedData.length === 0) {
+                alert('请先点击"格式化"按钮处理数据！');
+                return;
+            }
+
+            const newWorkbook = XLSX.utils.book_new();
+            const newWorksheet = XLSX.utils.aoa_to_sheet(formattedData);
+
+            // Step 1: 纸张设置 A4
+            const orient = currentConfig.paper.orientation;
+            let orientation = 'portrait';
+            if (orient === 'landscape') {
+                orientation = 'landscape';
+            } else if (orient === 'auto') {
+                // 估算：列数 * 平均列宽
+                const colCount = formattedData[0]?.length || 0;
+                orientation = colCount > 10 ? 'landscape' : 'portrait';
+            }
+
+            newWorksheet['!pageSetup'] = {
+                paperSize: 9, // A4
+                orientation: orientation,
+                fitToWidth: 1, // Step 6: 打印自适应缩放
+                fitToHeight: 0
+            };
+
+            // Step 2: 页面边距
+            newWorksheet['!margins'] = {
+                left: 0.71,   // 1.8cm ≈ 0.71 inches
+                right: 0.71,
+                top: 0.59,    // 1.5cm ≈ 0.59 inches
+                bottom: 0.59,
+                header: 0.3,
+                footer: 0.3
+            };
+
+            // Step 5: 冻结首行
+            newWorksheet['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft', state: 'frozen' };
+
+            XLSX.utils.book_append_sheet(newWorkbook, newWorksheet, '格式化');
+            XLSX.writeFile(newWorkbook, 'formatted.xlsx');
+
+            showSuccessToast('导出成功！');
+        });
+
+        // 打印预览
+        printBtn.addEventListener('click', () => {
+            window.print();
+        });
+
+        // 页面加载时自动应用默认格式（标准报表）
+        try {
+            applyPreset('standard');
+        } catch (e) {
+            console.error('自动应用格式失败:', e);
+        }
+    </script>
+</body>
+
+</html>
