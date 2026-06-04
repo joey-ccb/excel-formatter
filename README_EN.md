@@ -4,6 +4,8 @@
 
 A pure frontend Excel formatting tool that solves inconsistent formatting issues in Excel files, including fonts, margins, paper size, and layout structure.
 
+![Excel 格式统一工具](./Excel%20格式统一工具.png)
+
 ## Features
 
 - **Paper Settings**: Unified A4 paper size with smart portrait/landscape auto-switching (auto landscape when content width > 19cm)
